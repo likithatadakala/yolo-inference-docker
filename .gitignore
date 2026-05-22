@@ -1,0 +1,24 @@
+# ML model weights (download separately, see README)
+*.pt
+*.pth
+*.onnx
+*.safetensors
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.env
+
+# OS
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+
+# Build artifacts
+*.egg-info/
+dist/
+build/
