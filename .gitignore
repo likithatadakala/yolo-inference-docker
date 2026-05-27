@@ -23,8 +23,7 @@ venv/
 dist/
 build/
 
+
 # Test fixtures (downloaded on demand)
 test.jpg
-*.jpg
-*.jpeg
-*.png
+
