@@ -165,10 +165,6 @@ yolo-inference-docker/
 └── README.md
 ```
 
-## What's NOT in this repo
-
-This is a **personal portfolio project** demonstrating Docker + ML deployment patterns on public, pretrained models. It is intentionally independent from any prior employer work. The same patterns (multi-stage builds, non-root users, baked weights, FastAPI inference endpoints) generalize to production CV pipelines I've built elsewhere.
-
 ## Future work
 
 - Land the CPU-only PyTorch fix (target: ~1 GB image)
