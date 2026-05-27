@@ -138,9 +138,17 @@ Then hit `http://localhost:8080/` and `http://localhost:8080/docs` in your brows
 
 ### Verified behaviors
 
-- **Self-healing:** Deleting a Pod with `kubectl delete pod <name>` triggers automatic replacement (Deployment maintains desired replica count).
-- **Load balancing:** Traffic round-robins across Pods; verified via `kubectl logs -l app=yolo-inference -f`.
-- **Autoscaling:** Under sustained load (50 parallel `/predict` requests), HPA scaled the Deployment from 2 → 5 Pods within ~30 seconds. CPU peaked at 109% / 50% target.
+**Self-healing.** Deleting a Pod with `kubectl delete pod <name>` triggers automatic replacement. The Deployment controller maintains the desired replica count without manual intervention.
+
+![Pod lifecycle: Terminating → Completed → new Pods Running](screenshots/pod-lifecycle.png)
+
+**Load balancing.** Traffic round-robins across Pods. Verified by sending 50 parallel `/predict` requests and watching them distribute across both Pods via `kubectl logs -l app=yolo-inference -f`.
+
+![Load test: 50 parallel curl requests](screenshots/load-testing.png)
+
+**Autoscaling.** Under sustained load, HPA scaled the Deployment from 2 → 5 Pods within ~30 seconds. CPU peaked at 109% against a 50% target before HPA added Pods to bring it back under threshold.
+
+![HPA scaling 2 → 4 → 5 Pods as CPU spikes to 109%](screenshots/hpa-autoscale.png)
 
 ### Production notes
 
