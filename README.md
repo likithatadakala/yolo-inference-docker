@@ -106,16 +106,62 @@ Achieving v3 cleanly requires aligning specific torch/torchvision versions to wh
 
 **`.dockerignore`:** Excludes `.git`, `.env`, IDE configs, and Python cache from the build context — faster builds and no accidental secret leakage.
 
+## Kubernetes Deployment
+
+The container can be deployed to any Kubernetes cluster. Manifests in the `k8s/` folder demonstrate production patterns including health probes, label-based service discovery, and horizontal autoscaling.
+
+### What's in `k8s/`
+
+| File | What it does |
+|------|--------------|
+| `deployment.yaml` | 2-replica Deployment with liveness + readiness probes on `/health`, resource requests/limits |
+| `service.yaml` | NodePort Service routing traffic across Pods via label selection |
+| `hpa.yaml` | HorizontalPodAutoscaler scaling 2-6 Pods based on 50% CPU target |
+
+### Deploy to a local cluster (kind)
+
+```bash
+# Create cluster
+kind create cluster --name yolo-cluster
+
+# Load image into kind (avoids Docker Hub round-trip during dev)
+kind load docker-image yolo-inference:v2 --name yolo-cluster
+
+# Apply manifests
+kubectl apply -f k8s/
+
+# Access the service
+kubectl port-forward service/yolo-inference-service 8080:80
+```
+
+Then hit `http://localhost:8080/` and `http://localhost:8080/docs` in your browser.
+
+### Verified behaviors
+
+- **Self-healing:** Deleting a Pod with `kubectl delete pod <name>` triggers automatic replacement (Deployment maintains desired replica count).
+- **Load balancing:** Traffic round-robins across Pods; verified via `kubectl logs -l app=yolo-inference -f`.
+- **Autoscaling:** Under sustained load (50 parallel `/predict` requests), HPA scaled the Deployment from 2 → 5 Pods within ~30 seconds. CPU peaked at 109% / 50% target.
+
+### Production notes
+
+- `imagePullPolicy: IfNotPresent` is set for local development. In a cloud cluster, the image would be pulled from Docker Hub (`tadakalalikitha/yolo-inference:latest`) and the policy could be `Always` or `IfNotPresent` depending on whether tag pinning is used.
+- `NodePort` is used for local kind access. In production AWS/GCP, this would be `type: LoadBalancer` (auto-provisioned cloud LB) or fronted by an Ingress controller.
+- The metrics-server installed in kind required `--kubelet-insecure-tls` patch due to self-signed cluster certs. Managed Kubernetes services (EKS, GKE, AKS) ship metrics-server pre-configured.
+
 ## Project Structure
 
 ```
 yolo-inference-docker/
-├── app.py              # FastAPI app + YOLO model loading
-├── Dockerfile          # Multi-stage build (v2)
-├── Dockerfile.v1       # Single-stage baseline (kept for comparison)
-├── requirements.txt    # Pinned Python dependencies
-├── .dockerignore       # Build context exclusions
-├── yolov8n.pt          # Pretrained YOLOv8n weights (~6 MB)
+├── app.py                    # FastAPI app + YOLO model loading
+├── Dockerfile                # Multi-stage build (v2)
+├── Dockerfile.v1             # Single-stage baseline (kept for comparison)
+├── requirements.txt          # Pinned Python dependencies
+├── .dockerignore             # Build context exclusions
+├── .gitignore                # Excludes weights, test fixtures, IDE files
+├── k8s/                      # Kubernetes manifests
+│   ├── deployment.yaml
+│   ├── service.yaml
+│   └── hpa.yaml
 └── README.md
 ```
 
@@ -126,10 +172,10 @@ This is a **personal portfolio project** demonstrating Docker + ML deployment pa
 ## Future work
 
 - Land the CPU-only PyTorch fix (target: ~1 GB image)
-- Add Kubernetes manifests (Deployment, Service, HPA)
 - GitHub Actions CI: build, test, push to Docker Hub on every commit
+- Deploy to AWS: EKS for the k8s manifests, or SageMaker for managed inference
 - RAG-style evals: structured test set with ground truth labels and recall@k metrics
-- AWS deployment: SageMaker async endpoint or Lambda + API Gateway
+- Observability: Prometheus + Grafana for the k8s deployment
 
 ## Author
 
