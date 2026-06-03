@@ -156,6 +156,26 @@ Then hit `http://localhost:8080/` and `http://localhost:8080/docs` in your brows
 - `NodePort` is used for local kind access. In production AWS/GCP, this would be `type: LoadBalancer` (auto-provisioned cloud LB) or fronted by an Ingress controller.
 - The metrics-server installed in kind required `--kubelet-insecure-tls` patch due to self-signed cluster certs. Managed Kubernetes services (EKS, GKE, AKS) ship metrics-server pre-configured.
 
+## Continuous Integration
+
+Every push and pull request triggers an automated pipeline in GitHub Actions: test → build → publish.
+
+### What runs on every push and PR
+- `pytest tests/` runs 4 smoke tests covering all 3 endpoints (`/`, `/health`, `/predict`)
+- Tests use FastAPI's `TestClient` to verify response structure, status codes, and prediction output
+
+### What runs only on merge to main
+- Docker image built from scratch in CI
+- Pushed to Docker Hub with two tags: `:latest` (convenience) and `:<commit-sha>` (traceability)
+- Docker Hub credentials stored as GitHub repo secrets
+
+### Why this matters
+- No more "works on my machine" — every commit is validated in a clean Ubuntu environment
+- Every Docker Hub image is traceable to the exact commit that produced it
+- Production deploys can pin to `:<commit-sha>` for safety, instead of the moving `:latest` target
+
+[![CI/CD Pipeline](https://github.com/likithatadakala/yolo-inference-docker/actions/workflows/ci.yml/badge.svg)](https://github.com/likithatadakala/yolo-inference-docker/actions/workflows/ci.yml)
+
 ## Project Structure
 
 ```
